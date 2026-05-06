@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>2026년 보훈사적지 탐방 프로그램 미션</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #333;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
+        }
+
+        /* 헤더 — 보훈 테마 (네이비 + 골드 액센트) */
+        .header {
+            background: linear-gradient(90deg, #0b2545 0%, #13315c 100%);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            color: white;
+            border-bottom: 2px solid #d4a017;
+            z-index: 50;
+        }
+
+        .header-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-title .badge {
+            font-size: 11px;
+            background: #d4a017;
+            color: #0b2545;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 800;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 탭 네비게이션 */
+        .tab-nav {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 1px solid #ddd;
+            z-index: 40;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            color: #0b2545;
+            border-bottom-color: #d4a017;
+            background: #f9f9f9;
+        }
+
+        .tab-btn:active { background: #efefef; }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab-content.active { display: flex; }
+
+        /* 카메라 화면 */
+        .camera-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+        }
+
+        .camera-container {
+            flex: 1;
+            position: relative;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* 촬영 직후 결과 이미지 (비디오 위에 크게 표시) */
+        .captured-preview {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+            display: none;
+            z-index: 30;
+        }
+        .captured-preview.show { display: block; }
+
+        .camera-placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #888;
+            font-size: 14px;
+            z-index: 10;
+        }
+
+        .camera-placeholder svg {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        /* 커스텀 PNG 프레임 오버레이 */
+        .custom-frame-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 25;
+            display: none;
+        }
+
+        .custom-frame-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: fill;
+        }
+
+        /* 카메라 컨트롤 */
+        .camera-controls {
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 31;
+        }
+
+        /* 촬영 후 액션 (저장/다시 찍기) — 촬영 화면에 바로 표시 */
+        .capture-actions {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 14px 16px max(14px, env(safe-area-inset-bottom));
+            display: none;
+            gap: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 32;
+        }
+        .capture-actions.show { display: flex; }
+        .capture-actions button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .capture-actions .btn-retake {
+            background: #555;
+            color: white;
+        }
+        .capture-actions .btn-next {
+            background: linear-gradient(90deg, #0b2545 0%, #13315c 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn {
+            border: none;
+            border-radius: 50%;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 24px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn.shutter {
+            width: 70px;
+            height: 70px;
+            background: white;
+            color: #c8102e;
+            font-size: 0;
+            box-shadow: inset 0 -4px 0 rgba(0, 0, 0, 0.2), 0 4px 12px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .btn.shutter::before {
+            content: '';
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #c8102e;
+            position: absolute;
+        }
+
+        /* 플래시 애니메이션 */
+        .flash {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 100;
+            animation: flash-animation 0.2s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes flash-animation {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+
+        /* 정보입력 화면 */
+        .info-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .info-preview {
+            position: relative;
+            background: #000;
+            aspect-ratio: 4/3;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+
+        .info-form {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            flex: 1;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: #0b2545;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .form-label .req {
+            color: #c8102e;
+            font-size: 12px;
+        }
+
+        .form-input,
+        .form-textarea {
+            padding: 11px 12px;
+            border: 1px solid #ccd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            -webkit-appearance: none;
+            appearance: none;
+            background: white;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .form-textarea {
+            min-height: 64px;
+            resize: vertical;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #0b2545;
+            box-shadow: 0 0 0 2px rgba(11, 37, 69, 0.1);
+        }
+
+        /* 액션 버튼 */
+        .action-buttons {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            padding: 14px 16px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            -webkit-appearance: none;
+            appearance: none;
+            text-align: center;
+        }
+
+        .btn-primary.submit {
+            background: linear-gradient(90deg, #0b2545 0%, #13315c 100%);
+            color: white;
+            box-shadow: 0 2px 8px rgba(11, 37, 69, 0.25);
+        }
+
+        .btn-primary.submit:active { transform: scale(0.98); }
+        .btn-primary.submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .btn-primary.retake {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        /* 테마(프레임) 선택 */
+        .theme-select-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            background: white;
+        }
+
+        .theme-select-container {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .theme-select-intro {
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        .theme-select-intro h2 {
+            font-size: 17px;
+            margin-bottom: 4px;
+            color: #0b2545;
+        }
+
+        .theme-select-intro p {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .frame-gallery-section {
+            padding: 12px;
+            background: #f4f6fb;
+            border-radius: 12px;
+            border: 1px solid #d8def0;
+        }
+
+        .frame-gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(95px, 1fr));
+            gap: 10px;
+        }
+
+        .frame-gallery-item {
+            position: relative;
+            aspect-ratio: 3/4;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 3px solid transparent;
+            background: repeating-conic-gradient(#e8e8e8 0% 25%, #fff 0% 50%) 50% / 12px 12px;
+        }
+
+        .frame-gallery-item:active { transform: scale(0.95); }
+
+        .frame-gallery-item.selected {
+            border-color: #d4a017;
+            box-shadow: 0 0 0 2px rgba(212, 160, 23, 0.3);
+        }
+
+        .frame-gallery-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .frame-gallery-item .frame-label {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 3px 4px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            font-size: 10px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .frame-gallery-empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 24px 12px;
+            color: #999;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        /* 프레임 미리보기 모달 */
+        .frame-preview-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .frame-preview-modal.active { display: flex; }
+
+        .frame-preview-modal .preview-image {
+            max-width: 85%;
+            max-height: 60vh;
+            object-fit: contain;
+            border-radius: 12px;
+            background: repeating-conic-gradient(#444 0% 25%, #333 0% 50%) 50% / 16px 16px;
+        }
+
+        .frame-preview-modal .preview-name {
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .frame-preview-modal .preview-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .frame-preview-modal .btn-use {
+            padding: 14px 32px;
+            border: none;
+            background: linear-gradient(90deg, #0b2545 0%, #13315c 100%);
+            color: white;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .frame-preview-modal .btn-cancel {
+            padding: 14px 24px;
+            border: 1px solid rgba(255,255,255,0.3);
+            background: transparent;
+            color: white;
+            border-radius: 12px;
+            font-size: 15px;
+            cursor: pointer;
+        }
+
+        /* 상태 메시지 */
+        .status-message {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            animation: slide-up 0.3s ease-out forwards;
+            z-index: 70;
+            max-width: 320px;
+        }
+
+        .status-message.success { background: #00824f; color: white; }
+        .status-message.error { background: #c8102e; color: white; }
+        .status-message.info { background: #0b2545; color: white; }
+
+        @keyframes slide-up {
+            from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+            to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 권한 거부 화면 */
+        .permission-denied {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 32px 20px;
+            text-align: center;
+            background: white;
+        }
+
+        .permission-denied-icon { font-size: 56px; margin-bottom: 16px; }
+        .permission-denied h2 { font-size: 18px; margin-bottom: 8px; color: #0b2545; }
+        .permission-denied p {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .permission-denied button {
+            padding: 10px 20px;
+            background: #0b2545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        /* iOS safe-area */
+        @supports (padding: max(0px)) {
+            .header { padding: max(12px, env(safe-area-inset-top)) 16px 12px; }
+            .action-buttons { padding: 12px 12px max(12px, env(safe-area-inset-bottom)); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #999; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">
+                <span class="badge">2026</span>
+                <span>보훈사적지 탐방 프로그램 미션</span>
+            </div>
+        </div>
+
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="theme-select">🎨 테마선택</button>
+            <button class="tab-btn" data-tab="camera">📷 촬영</button>
+            <button class="tab-btn" data-tab="info-input">📝 정보입력</button>
+        </div>
+
+        <div class="content">
+            <!-- 테마 선택 탭 -->
+            <div class="tab-content active" id="theme-select">
+                <div class="theme-select-section">
+                    <div class="theme-select-container">
+                        <div class="theme-select-intro">
+                            <h2>프레임을 선택해주세요</h2>
+                            <p>프레임을 터치하면 카메라로 이동합니다</p>
+                        </div>
+                        <div class="frame-gallery-section">
+                            <div class="frame-gallery-grid" id="frameGalleryGrid">
+                                <div class="frame-gallery-empty">프레임 로딩 중...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 프레임 미리보기 모달 -->
+            <div class="frame-preview-modal" id="framePreviewModal">
+                <img class="preview-image" id="framePreviewImage" alt="프레임 미리보기">
+                <div class="preview-name" id="framePreviewName"></div>
+                <div class="preview-actions">
+                    <button class="btn-cancel" onclick="closeFramePreview()">돌아가기</button>
+                    <button class="btn-use" onclick="confirmFrameSelection()">이 프레임 사용</button>
+                </div>
+            </div>
+
+            <!-- 카메라 탭 -->
+            <div class="tab-content" id="camera">
+                <div class="camera-section">
+                    <div class="camera-container">
+                        <video class="video-preview" id="videoPreview" playsinline autoplay muted></video>
+                        <img class="captured-preview" id="capturedPreview" alt="촬영 결과">
+                        <div class="custom-frame-overlay" id="customFrameOverlay">
+                            <img id="customFramePreview" alt="커스텀 프레임">
+                        </div>
+                        <div class="camera-placeholder" id="cameraPlaceholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                            <div>카메라 준비 중...</div>
+                        </div>
+                        <!-- 촬영 후 액션 (저장/다시 찍기) -->
+                        <div class="capture-actions" id="captureActions">
+                            <button class="btn-retake" id="captureRetakeBtn">📷 다시 찍기</button>
+                            <button class="btn-next" id="captureNextBtn">📝 정보 입력하기</button>
+                        </div>
+                    </div>
+                    <div class="camera-controls" id="cameraControls">
+                        <button class="btn" id="flipBtn" title="카메라 전환">🔄</button>
+                        <button class="btn shutter" id="shutterBtn" title="촬영"></button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 정보입력 탭 -->
+            <div class="tab-content" id="info-input">
+                <div class="info-section">
+                    <div class="info-preview">
+                        <img id="resultImage" class="preview-image" alt="촬영된 사진" style="display: none;">
+                        <div id="infoPlaceholder" style="color: #888; font-size: 14px; text-align: center;">촬영된 사진이 여기에 표시됩니다</div>
+                    </div>
+                    <div class="info-form">
+                        <div class="form-group">
+                            <label class="form-label" for="schoolName">🏫 학교명 <span class="req">*</span></label>
+                            <input class="form-input" type="text" id="schoolName" placeholder="예) 한양초등학교 6학년 2반" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="teamName">🏁 팀명 <span class="req">*</span></label>
+                            <input class="form-input" type="text" id="teamName" placeholder="예) 호국팀" autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="teamMembers">👥 팀원 이름 <span class="req">*</span></label>
+                            <textarea class="form-textarea" id="teamMembers" placeholder="예) 홍길동, 김민수, 이서연"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="quizAnswer">🧩 퀴즈미션의 정답은? <span class="req">*</span></label>
+                            <input class="form-input" type="text" id="quizAnswer" placeholder="정답을 입력하세요" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-primary submit" id="submitBtn">📤 제출하기</button>
+                        <button class="btn-primary retake" id="retakeBtn">📷 다시 찍기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 권한 거부 -->
+    <div id="permissionDenied" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 100; flex-direction: column; align-items: center; justify-content: center;">
+        <div class="permission-denied">
+            <div class="permission-denied-icon">🚫</div>
+            <h2>카메라 접근 불가</h2>
+            <p>이 앱을 사용하려면 카메라 접근 권한이 필요합니다.<br>브라우저 설정에서 카메라 권한을 허용해주세요.</p>
+            <button id="retryBtn">다시 시도</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // 앱 상태
+        // ============================================
+        const appState = {
+            // URL 파라미터 (운영 시 코스/장소 자동 주입 가능)
+            course: new URLSearchParams(window.location.search).get('course') || '보훈사적지',
+            place: new URLSearchParams(window.location.search).get('place') || '',
+            date: new URLSearchParams(window.location.search).get('date') || new Date().toISOString().split('T')[0],
+
+            facingMode: 'environment',
+            mediaStream: null,
+
+            currentPhoto: null,
+
+            imageQuality: 0.85,
+
+            // ⚠️ 운영 시 교체 필수
+            // 1) Apps Script 웹앱 URL (사진 업로드 + 프레임 목록 제공)
+            appsScriptUrl: '',
+            // 2) Drive 프레임 폴더 ID (Apps Script가 이 폴더의 PNG를 frames로 노출)
+            frameFolderId: '',
+            // 3) 로컬 manifest 경로 (Apps Script 미설정 시 fallback)
+            localManifestUrl: 'frames/manifest.json',
+
+            customFrameImage: null,
+            customFrameLoaded: false,
+
+            frameGallery: [],
+            selectedFrameId: localStorage.getItem('vmc_selectedFrameId') || null,
+
+            _pendingFrameId: null,
+        };
+
+        // ============================================
+        // UI 요소
+        // ============================================
+        const ui = {
+            video: document.getElementById('videoPreview'),
+            canvas: document.createElement('canvas'),
+            capturedPreview: document.getElementById('capturedPreview'),
+            resultImage: document.getElementById('resultImage'),
+            cameraPlaceholder: document.getElementById('cameraPlaceholder'),
+            shutterBtn: document.getElementById('shutterBtn'),
+            flipBtn: document.getElementById('flipBtn'),
+            cameraControls: document.getElementById('cameraControls'),
+            captureActions: document.getElementById('captureActions'),
+            captureRetakeBtn: document.getElementById('captureRetakeBtn'),
+            captureNextBtn: document.getElementById('captureNextBtn'),
+            submitBtn: document.getElementById('submitBtn'),
+            retakeBtn: document.getElementById('retakeBtn'),
+            tabBtns: document.querySelectorAll('.tab-btn'),
+            tabContents: document.querySelectorAll('.tab-content'),
+            permissionDenied: document.getElementById('permissionDenied'),
+            permRetryBtn: document.getElementById('retryBtn'),
+            customFrameOverlay: document.getElementById('customFrameOverlay'),
+            customFramePreview: document.getElementById('customFramePreview'),
+            frameGalleryGrid: document.getElementById('frameGalleryGrid'),
+            schoolName: document.getElementById('schoolName'),
+            teamName: document.getElementById('teamName'),
+            teamMembers: document.getElementById('teamMembers'),
+            quizAnswer: document.getElementById('quizAnswer'),
+            infoPlaceholder: document.getElementById('infoPlaceholder'),
+        };
+
+        // ============================================
+        // 초기화
+        // ============================================
+        function init() {
+            setupEventListeners();
+            initCamera();
+            loadFrames();
+            restoreSavedInfo();
+
+            document.getElementById('framePreviewModal').addEventListener('click', function(e) {
+                if (e.target === this) closeFramePreview();
+            });
+        }
+
+        function setupEventListeners() {
+            ui.tabBtns.forEach(btn => btn.addEventListener('click', switchTab));
+            ui.shutterBtn.addEventListener('click', capturePhoto);
+            ui.flipBtn.addEventListener('click', flipCamera);
+            ui.captureRetakeBtn.addEventListener('click', retakeFromCamera);
+            ui.captureNextBtn.addEventListener('click', goToInfoInput);
+            ui.submitBtn.addEventListener('click', submitMission);
+            ui.retakeBtn.addEventListener('click', retakeFromCamera);
+            ui.permRetryBtn.addEventListener('click', initCamera);
+
+            // 입력값 자동 저장
+            [ui.schoolName, ui.teamName, ui.teamMembers, ui.quizAnswer].forEach(el => {
+                el.addEventListener('input', saveInputState);
+            });
+        }
+
+        // ============================================
+        // 프레임 로드 (Apps Script → 실패 시 로컬 manifest)
+        // ============================================
+        async function loadFrames() {
+            const grid = ui.frameGalleryGrid;
+            grid.innerHTML = '<div class="frame-gallery-empty">프레임 로딩 중...</div>';
+
+            // 1) Apps Script 시도
+            if (appState.appsScriptUrl) {
+                try {
+                    const url = appState.appsScriptUrl + '?action=getFrames';
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    if (data.success && data.frames && data.frames.length > 0) {
+                        appState.frameGallery = data.frames.map(f => ({
+                            id: f.id, name: f.name, directUrl: f.url
+                        }));
+                        renderFrameGallery();
+                        restoreSelectedFrame();
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('Apps Script 프레임 로드 실패, 로컬 fallback 시도:', e);
+                }
+            }
+
+            // 2) 로컬 manifest fallback
+            try {
+                const res = await fetch(appState.localManifestUrl);
+                if (!res.ok) throw new Error('manifest not found');
+                const list = await res.json();
+                appState.frameGallery = list.map((f, i) => ({
+                    id: f.id || ('local-' + i),
+                    name: f.name || f.file,
+                    directUrl: 'frames/' + f.file
+                }));
+                renderFrameGallery();
+                restoreSelectedFrame();
+            } catch (e) {
+                console.error('로컬 프레임 로드 실패:', e);
+                grid.innerHTML = '<div class="frame-gallery-empty">프레임을 불러올 수 없습니다<br>네트워크 또는 frames/manifest.json을 확인해주세요</div>';
+            }
+        }
+
+        function restoreSelectedFrame() {
+            if (appState.selectedFrameId) {
+                const saved = appState.frameGallery.find(f => f.id === appState.selectedFrameId);
+                if (saved) loadCustomFrameImage(saved.directUrl, /*silent*/ true);
+            }
+        }
+
+        function renderFrameGallery() {
+            const grid = ui.frameGalleryGrid;
+            const frames = appState.frameGallery;
+            if (!frames.length) {
+                grid.innerHTML = '<div class="frame-gallery-empty">등록된 프레임이 없습니다</div>';
+                return;
+            }
+            grid.innerHTML = '';
+            frames.forEach(frame => {
+                const item = document.createElement('div');
+                item.className = 'frame-gallery-item' + (appState.selectedFrameId === frame.id ? ' selected' : '');
+                item.innerHTML =
+                    '<img src="' + frame.directUrl + '" alt="' + frame.name + '">' +
+                    '<div class="frame-label">' + frame.name + '</div>';
+                item.addEventListener('click', () => selectGalleryFrame(frame.id));
+                grid.appendChild(item);
+            });
+        }
+
+        function selectGalleryFrame(frameId) {
+            const frame = appState.frameGallery.find(f => f.id === frameId);
+            if (!frame) return;
+            appState._pendingFrameId = frameId;
+            document.getElementById('framePreviewImage').src = frame.directUrl;
+            document.getElementById('framePreviewName').textContent = frame.name;
+            document.getElementById('framePreviewModal').classList.add('active');
+        }
+
+        function closeFramePreview() {
+            document.getElementById('framePreviewModal').classList.remove('active');
+            appState._pendingFrameId = null;
+        }
+
+        function confirmFrameSelection() {
+            const frameId = appState._pendingFrameId;
+            if (!frameId) return;
+            const frame = appState.frameGallery.find(f => f.id === frameId);
+            if (!frame) return;
+
+            closeFramePreview();
+            appState.selectedFrameId = frameId;
+            localStorage.setItem('vmc_selectedFrameId', frameId);
+
+            document.querySelectorAll('.frame-gallery-item').forEach(el => el.classList.remove('selected'));
+            const idx = appState.frameGallery.findIndex(f => f.id === frameId);
+            const items = document.querySelectorAll('.frame-gallery-item');
+            if (items[idx]) items[idx].classList.add('selected');
+
+            showStatus('프레임 로딩 중...', 'info');
+            loadCustomFrameImage(frame.directUrl);
+        }
+
+        function loadCustomFrameImage(src, silent) {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+
+            const success = (loaded) => {
+                appState.customFrameImage = loaded;
+                appState.customFrameLoaded = true;
+                ui.customFramePreview.src = src;
+                ui.customFrameOverlay.style.display = 'block';
+                if (!silent) {
+                    showStatus('프레임이 적용되었습니다', 'success');
+                    setTimeout(() => switchTab({ target: ui.tabBtns[1] }), 400);
+                }
+            };
+
+            img.onload = () => success(img);
+            img.onerror = () => {
+                // CORS 실패 시 crossOrigin 없이 재시도
+                const img2 = new Image();
+                img2.onload = () => success(img2);
+                img2.onerror = () => {
+                    appState.customFrameLoaded = false;
+                    if (!silent) showStatus('프레임 이미지를 불러올 수 없습니다', 'error');
+                };
+                img2.src = src;
+            };
+            img.src = src;
+        }
+
+        // ============================================
+        // 카메라
+        // ============================================
+        async function initCamera() {
+            try {
+                ui.permissionDenied.style.display = 'none';
+                ui.cameraPlaceholder.style.display = 'flex';
+
+                appState.mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: appState.facingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 960 }
+                    },
+                    audio: false
+                });
+                ui.video.srcObject = appState.mediaStream;
+                ui.video.onloadedmetadata = () => {
+                    ui.cameraPlaceholder.style.display = 'none';
+                };
+            } catch (error) {
+                console.error('카메라 초기화 실패:', error);
+                if (error.name === 'NotAllowedError') {
+                    ui.permissionDenied.style.display = 'flex';
+                } else {
+                    showStatus('카메라 초기화 실패: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function flipCamera() {
+            appState.facingMode = appState.facingMode === 'environment' ? 'user' : 'environment';
+            if (appState.mediaStream) {
+                appState.mediaStream.getTracks().forEach(t => t.stop());
+            }
+            await initCamera();
+        }
+
+        // ============================================
+        // 촬영
+        // ============================================
+        function capturePhoto() {
+            if (!ui.video || !ui.video.videoWidth) {
+                showStatus('카메라가 준비되지 않았습니다', 'error');
+                return;
+            }
+
+            // 플래시
+            const flash = document.createElement('div');
+            flash.className = 'flash';
+            document.body.appendChild(flash);
+            setTimeout(() => flash.remove(), 200);
+
+            const ctx = ui.canvas.getContext('2d');
+            ui.canvas.width = ui.video.videoWidth;
+            ui.canvas.height = ui.video.videoHeight;
+            ctx.drawImage(ui.video, 0, 0);
+
+            if (appState.customFrameLoaded && appState.customFrameImage) {
+                ctx.drawImage(appState.customFrameImage, 0, 0, ui.canvas.width, ui.canvas.height);
+            }
+
+            const dataUrl = ui.canvas.toDataURL('image/jpeg', appState.imageQuality);
+            appState.currentPhoto = {
+                dataUrl,
+                timestamp: new Date().toISOString()
+            };
+
+            // 촬영 결과를 카메라 화면에 크게 표시 (PPTX 사양: "촬영한 이미지가 크게 보이게")
+            ui.capturedPreview.src = dataUrl;
+            ui.capturedPreview.classList.add('show');
+            ui.cameraControls.style.display = 'none';
+            ui.captureActions.classList.add('show');
+
+            playShutterSound();
+        }
+
+        // 촬영 화면에서 "다시 찍기"
+        function retakeFromCamera() {
+            appState.currentPhoto = null;
+            ui.capturedPreview.classList.remove('show');
+            ui.capturedPreview.src = '';
+            ui.cameraControls.style.display = 'flex';
+            ui.captureActions.classList.remove('show');
+            ui.resultImage.style.display = 'none';
+            ui.infoPlaceholder.style.display = '';
+            switchTab({ target: ui.tabBtns[1] });
+        }
+
+        // 촬영 화면에서 "정보 입력하기"
+        function goToInfoInput() {
+            if (!appState.currentPhoto) return;
+            ui.resultImage.src = appState.currentPhoto.dataUrl;
+            ui.resultImage.style.display = 'block';
+            ui.infoPlaceholder.style.display = 'none';
+            switchTab({ target: ui.tabBtns[2] });
+        }
+
+        // ============================================
+        // 제출
+        // ============================================
+        async function submitMission() {
+            if (!appState.currentPhoto) {
+                showStatus('먼저 사진을 촬영해주세요', 'error');
+                switchTab({ target: ui.tabBtns[1] });
+                return;
+            }
+            const school = ui.schoolName.value.trim();
+            const team = ui.teamName.value.trim();
+            const members = ui.teamMembers.value.trim();
+            const answer = ui.quizAnswer.value.trim();
+
+            if (!school || !team || !members || !answer) {
+                showStatus('모든 항목을 입력해주세요', 'error');
+                return;
+            }
+
+            // Apps Script 미설정 시: 로컬 다운로드 + 클립보드 안내
+            if (!appState.appsScriptUrl) {
+                downloadLocalAndCopy(school, team, members, answer);
+                return;
+            }
+
+            try {
+                ui.submitBtn.disabled = true;
+                ui.submitBtn.innerHTML = '<span class="spinner"></span> 제출 중...';
+
+                const base64Image = await compressForUpload(appState.currentPhoto.dataUrl, 1280, 0.7);
+
+                const payload = {
+                    action: 'submitMission',
+                    course: appState.course,
+                    place: appState.place,
+                    date: appState.date,
+                    schoolName: school,
+                    teamName: team,
+                    teamMembers: members,
+                    quizAnswer: answer,
+                    imageData: base64Image,
+                    timestamp: new Date().toISOString()
+                };
+
+                const res = await fetch(appState.appsScriptUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    showStatus('✅ 미션이 제출되었습니다', 'success');
+                    clearInputs();
+                } else {
+                    throw new Error('서버 오류');
+                }
+            } catch (err) {
+                console.error('제출 오류:', err);
+                showStatus('제출 실패 — 로컬 저장으로 전환합니다', 'info');
+                downloadLocalAndCopy(school, team, members, answer);
+            } finally {
+                ui.submitBtn.disabled = false;
+                ui.submitBtn.innerHTML = '📤 제출하기';
+            }
+        }
+
+        // Apps Script 미설정/실패 시 로컬 저장
+        function downloadLocalAndCopy(school, team, members, answer) {
+            const fileName = `보훈미션_${team}_${appState.date}_${Date.now()}.jpg`;
+            const dataUrl = appState.currentPhoto.dataUrl;
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+            if (isIOS) {
+                const w = window.open();
+                if (w) {
+                    w.document.write(
+                        `<!DOCTYPE html><html><head><title>${fileName}</title>` +
+                        `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+                        `<style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#000;}img{max-width:100%;height:auto;}` +
+                        `.guide{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.85);color:#fff;text-align:center;padding:14px;font-size:14px;}</style></head><body>` +
+                        `<div class="guide">📱 이미지를 <b>길게 눌러</b> "사진에 추가"로 저장하세요</div>` +
+                        `<img src="${dataUrl}" alt="${fileName}"></body></html>`
+                    );
+                    w.document.close();
+                }
+            } else {
+                try {
+                    const byteString = atob(dataUrl.split(',')[1]);
+                    const ab = new ArrayBuffer(byteString.length);
+                    const ia = new Uint8Array(ab);
+                    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                    const blob = new Blob([ab], { type: 'image/jpeg' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = fileName;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 3000);
+                } catch (e) {
+                    const a = document.createElement('a');
+                    a.href = dataUrl; a.download = fileName;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                }
+            }
+
+            const summary = `[2026 보훈사적지 탐방 미션]\n학교: ${school}\n팀명: ${team}\n팀원: ${members}\n정답: ${answer}\n날짜: ${appState.date}`;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(summary).catch(() => {});
+            }
+            showStatus('✅ 사진 저장 완료 (제출 정보는 클립보드에 복사됨)', 'success');
+        }
+
+        function clearInputs() {
+            ui.schoolName.value = '';
+            ui.teamName.value = '';
+            ui.teamMembers.value = '';
+            ui.quizAnswer.value = '';
+            saveInputState();
+        }
+
+        // ============================================
+        // 입력 상태 저장/복원
+        // ============================================
+        function saveInputState() {
+            const state = {
+                school: ui.schoolName.value,
+                team: ui.teamName.value,
+                members: ui.teamMembers.value,
+                answer: ui.quizAnswer.value
+            };
+            localStorage.setItem('vmc_inputState', JSON.stringify(state));
+        }
+
+        function restoreSavedInfo() {
+            try {
+                const raw = localStorage.getItem('vmc_inputState');
+                if (!raw) return;
+                const s = JSON.parse(raw);
+                if (s.school) ui.schoolName.value = s.school;
+                if (s.team) ui.teamName.value = s.team;
+                if (s.members) ui.teamMembers.value = s.members;
+                if (s.answer) ui.quizAnswer.value = s.answer;
+            } catch (e) {}
+        }
+
+        // ============================================
+        // 보조 기능
+        // ============================================
+        function compressForUpload(dataUrl, maxSize, quality) {
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let w = img.width, h = img.height;
+                    if (w > maxSize || h > maxSize) {
+                        const ratio = Math.min(maxSize / w, maxSize / h);
+                        w = Math.round(w * ratio);
+                        h = Math.round(h * ratio);
+                    }
+                    canvas.width = w; canvas.height = h;
+                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                    resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
+                };
+                img.src = dataUrl;
+            });
+        }
+
+        function switchTab(e) {
+            const el = e && (e.currentTarget || e.target);
+            if (!el || !el.dataset) return;
+            const tabName = el.dataset.tab;
+            ui.tabBtns.forEach(b => b.classList.remove('active'));
+            ui.tabContents.forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            document.getElementById(tabName)?.classList.add('active');
+        }
+
+        function showStatus(message, type = 'info') {
+            const msg = document.createElement('div');
+            msg.className = `status-message ${type}`;
+            msg.textContent = message;
+            document.body.appendChild(msg);
+            setTimeout(() => {
+                msg.style.animation = 'slide-up 0.3s ease-out reverse forwards';
+                setTimeout(() => msg.remove(), 300);
+            }, 2500);
+        }
+
+        function playShutterSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.1);
+            } catch (e) {}
+        }
+
+        // ============================================
+        // 부팅
+        // ============================================
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

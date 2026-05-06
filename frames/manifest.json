@@ -1,0 +1,10 @@
+[
+  { "id": "gnb-01", "file": "1.png", "name": "프레임 1" },
+  { "id": "gnb-02", "file": "2.png", "name": "프레임 2" },
+  { "id": "gnb-03", "file": "3.png", "name": "프레임 3" },
+  { "id": "gnb-04", "file": "4.png", "name": "프레임 4" },
+  { "id": "gnb-05", "file": "5.png", "name": "프레임 5" },
+  { "id": "gnb-06", "file": "6.png", "name": "프레임 6" },
+  { "id": "gnb-07", "file": "7.png", "name": "프레임 7" },
+  { "id": "gnb-08", "file": "8.png", "name": "프레임 8" }
+]
