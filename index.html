@@ -131,6 +131,30 @@
             overflow: hidden;
         }
 
+        /* 카메라 무대 — 세로/가로 프레임에 따라 비율이 달라짐 */
+        .camera-stage {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+        /* "가로" 키워드가 있는 프레임 선택 시 — 가로(4:3) 무대 */
+        .camera-stage.landscape {
+            width: auto;
+            height: auto;
+            aspect-ratio: 4 / 3;
+            max-width: 100%;
+            max-height: 100%;
+        }
+        /* 세로 프레임(기본) — 3:4 무대로 고정해 상하 letterbox 없이 채우게끔 */
+        .camera-stage.portrait {
+            width: auto;
+            height: 100%;
+            aspect-ratio: 3 / 4;
+            max-width: 100%;
+        }
+
         .video-preview {
             width: 100%;
             height: 100%;
@@ -188,38 +212,21 @@
             object-fit: fill;
         }
 
-        /* 프레임 회전 버튼 (카메라 화면 우상단 플로팅) */
-        .frame-rotate-btn {
+        /* 가로 프레임 표시 라벨 (좌상단) */
+        .frame-orient-tag {
             position: absolute;
-            top: 12px;
-            right: 12px;
-            width: 46px;
-            height: 46px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.65);
-            color: white;
-            border: 1px solid rgba(255,255,255,0.35);
-            font-size: 20px;
-            z-index: 28;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
-        }
-        .frame-rotate-btn.show { display: flex; }
-        .frame-rotate-btn:active { background: rgba(0,0,0,0.85); transform: scale(0.95); }
-        .frame-rotate-btn .deg {
-            position: absolute;
-            bottom: -4px;
-            right: -4px;
-            background: #d4a017;
+            top: 10px;
+            left: 10px;
+            background: rgba(212, 160, 23, 0.95);
             color: #0b2545;
-            font-size: 10px;
+            font-size: 11px;
             font-weight: 800;
-            padding: 1px 4px;
-            border-radius: 8px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            z-index: 28;
+            display: none;
         }
+        .frame-orient-tag.show { display: block; }
 
         /* 카메라 컨트롤 */
         .camera-controls {
@@ -665,6 +672,44 @@
             .action-buttons { padding: 12px 12px max(12px, env(safe-area-inset-bottom)); }
         }
 
+        /* 📱 세로 모드 강제 — 모바일 가로 회전 시 안내 오버레이 */
+        .landscape-warn {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: linear-gradient(180deg, #0b2545, #13315c);
+            color: white;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            text-align: center;
+            padding: 20px;
+        }
+        .landscape-warn-icon {
+            font-size: 80px;
+            margin-bottom: 16px;
+            animation: rotate-hint 2s ease-in-out infinite;
+        }
+        @keyframes rotate-hint {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-90deg); }
+        }
+        .landscape-warn h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            font-weight: 800;
+        }
+        .landscape-warn p {
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.5;
+        }
+        @media screen and (orientation: landscape) and (max-width: 1024px) {
+            .container { display: none !important; }
+            .landscape-warn { display: flex !important; }
+        }
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #999; border-radius: 3px; }
@@ -717,14 +762,14 @@
             <div class="tab-content" id="camera">
                 <div class="camera-section">
                     <div class="camera-container">
-                        <video class="video-preview" id="videoPreview" playsinline autoplay muted></video>
-                        <img class="captured-preview" id="capturedPreview" alt="촬영 결과">
-                        <div class="custom-frame-overlay" id="customFrameOverlay">
-                            <img id="customFramePreview" alt="커스텀 프레임">
+                        <div class="camera-stage portrait" id="cameraStage">
+                            <video class="video-preview" id="videoPreview" playsinline autoplay muted></video>
+                            <img class="captured-preview" id="capturedPreview" alt="촬영 결과">
+                            <div class="custom-frame-overlay" id="customFrameOverlay">
+                                <img id="customFramePreview" alt="커스텀 프레임">
+                            </div>
+                            <div class="frame-orient-tag" id="frameOrientTag">📐 가로 프레임</div>
                         </div>
-                        <button class="frame-rotate-btn" id="frameRotateBtn" title="프레임 회전 (90°씩)">
-                            🔃<span class="deg" id="frameRotateDeg">0°</span>
-                        </button>
                         <div class="camera-placeholder" id="cameraPlaceholder">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
@@ -789,6 +834,13 @@
         </div>
     </div>
 
+    <!-- 가로 회전 안내 (모바일 가로 회전 시 표시) -->
+    <div class="landscape-warn">
+        <div class="landscape-warn-icon">📱</div>
+        <h2>세로 모드로 회전해주세요</h2>
+        <p>이 앱은 세로 모드 전용입니다.<br>휴대폰을 세로로 돌려주세요.</p>
+    </div>
+
     <script>
         // ============================================
         // 앱 상태
@@ -816,10 +868,9 @@
             // 4) 로컬 manifest 경로 (Apps Script 미설정 시 fallback)
             localManifestUrl: 'frames/manifest.json',
 
-            customFrameImage: null,        // 회전이 적용된(촬영 합성용) Image
-            customFrameOriginal: null,     // 원본 Image (회전 기준)
+            customFrameImage: null,        // 촬영 합성용 Image
             customFrameLoaded: false,
-            frameRotation: 0,              // 0 / 90 / 180 / 270
+            frameLandscape: false,         // 파일명에 "가로" 포함 여부 — 자동 감지
 
             frameGallery: [],
             selectedFrameId: localStorage.getItem('vmc_selectedFrameId') || null,
@@ -851,8 +902,8 @@
             customFrameOverlay: document.getElementById('customFrameOverlay'),
             customFramePreview: document.getElementById('customFramePreview'),
             frameGalleryGrid: document.getElementById('frameGalleryGrid'),
-            frameRotateBtn: document.getElementById('frameRotateBtn'),
-            frameRotateDeg: document.getElementById('frameRotateDeg'),
+            cameraStage: document.getElementById('cameraStage'),
+            frameOrientTag: document.getElementById('frameOrientTag'),
             schoolName: document.getElementById('schoolName'),
             teamName: document.getElementById('teamName'),
             teamMembers: document.getElementById('teamMembers'),
@@ -883,7 +934,9 @@
             ui.submitBtn.addEventListener('click', submitMission);
             ui.retakeBtn.addEventListener('click', retakeFromCamera);
             ui.permRetryBtn.addEventListener('click', initCamera);
-            ui.frameRotateBtn.addEventListener('click', rotateFrame);
+
+            // 세로 고정 시도 (지원 환경에서)
+            tryLockPortrait();
 
             // 입력값 자동 저장
             [ui.schoolName, ui.teamName, ui.teamMembers, ui.quizAnswer].forEach(el => {
@@ -938,7 +991,7 @@
         function restoreSelectedFrame() {
             if (appState.selectedFrameId) {
                 const saved = appState.frameGallery.find(f => f.id === appState.selectedFrameId);
-                if (saved) loadCustomFrameImage(saved.directUrl, /*silent*/ true);
+                if (saved) loadCustomFrameImage(saved.directUrl, /*silent*/ true, saved.name);
             }
         }
 
@@ -991,20 +1044,36 @@
             if (items[idx]) items[idx].classList.add('selected');
 
             showStatus('프레임 로딩 중...', 'info');
-            loadCustomFrameImage(frame.directUrl);
+            loadCustomFrameImage(frame.directUrl, false, frame.name);
         }
 
-        function loadCustomFrameImage(src, silent) {
+        // 파일명에 "가로" 키워드가 있으면 가로 프레임으로 처리
+        function isLandscapeFrameName(name) {
+            return /가로/i.test(String(name || ''));
+        }
+
+        function applyFrameOrientation(name) {
+            const isLand = isLandscapeFrameName(name);
+            appState.frameLandscape = isLand;
+            if (ui.cameraStage) {
+                ui.cameraStage.classList.toggle('landscape', isLand);
+                ui.cameraStage.classList.toggle('portrait', !isLand);
+            }
+            if (ui.frameOrientTag) {
+                ui.frameOrientTag.classList.toggle('show', isLand);
+            }
+        }
+
+        function loadCustomFrameImage(src, silent, frameName) {
             const img = new Image();
             img.crossOrigin = 'anonymous';
 
             const success = (loaded) => {
-                appState.customFrameOriginal = loaded;
+                appState.customFrameImage = loaded;
                 appState.customFrameLoaded = true;
-                appState.frameRotation = 0;
-                applyFrameRotation();
+                ui.customFramePreview.src = src;
                 ui.customFrameOverlay.style.display = 'block';
-                ui.frameRotateBtn.classList.add('show');
+                applyFrameOrientation(frameName);
                 if (!silent) {
                     showStatus('프레임이 적용되었습니다', 'success');
                     setTimeout(() => switchTab({ target: ui.tabBtns[1] }), 400);
@@ -1025,69 +1094,13 @@
             img.src = src;
         }
 
-        // 현재 frameRotation 값에 맞게 원본을 회전한 이미지를 customFrameImage에 세팅
-        function applyFrameRotation() {
-            const orig = appState.customFrameOriginal;
-            if (!orig) return;
-            const rot = ((appState.frameRotation % 360) + 360) % 360;
-
-            // 라벨 표시 갱신
-            if (ui.frameRotateDeg) ui.frameRotateDeg.textContent = rot + '°';
-
-            if (rot === 0) {
-                appState.customFrameImage = orig;
-                ui.customFramePreview.src = orig.src;
-                return;
-            }
-
-            const w = orig.naturalWidth || orig.width;
-            const h = orig.naturalHeight || orig.height;
-            if (!w || !h) {
-                appState.customFrameImage = orig;
-                ui.customFramePreview.src = orig.src;
-                return;
-            }
-
-            const c = document.createElement('canvas');
-            if (rot === 90 || rot === 270) {
-                c.width = h; c.height = w;
-            } else {
-                c.width = w; c.height = h;
-            }
-            const cx = c.getContext('2d');
-            cx.translate(c.width / 2, c.height / 2);
-            cx.rotate(rot * Math.PI / 180);
-            cx.drawImage(orig, -w / 2, -h / 2);
-
+        // 세로 모드 강제 시도 (지원 환경 한정 — iOS Safari는 대부분 미지원)
+        function tryLockPortrait() {
             try {
-                const dataUrl = c.toDataURL('image/png');
-                const newImg = new Image();
-                newImg.onload = function() {
-                    appState.customFrameImage = newImg;
-                    ui.customFramePreview.src = dataUrl;
-                };
-                newImg.onerror = function() {
-                    // 캔버스 toDataURL 실패 시 원본 사용
-                    appState.customFrameImage = orig;
-                    ui.customFramePreview.src = orig.src;
-                };
-                newImg.src = dataUrl;
-            } catch (e) {
-                // CORS-tainted canvas (외부 이미지) — 원본 그대로 사용
-                console.warn('canvas tainted, falling back to original:', e);
-                appState.customFrameImage = orig;
-                ui.customFramePreview.src = orig.src;
-            }
-        }
-
-        function rotateFrame() {
-            if (!appState.customFrameOriginal) {
-                showStatus('먼저 프레임을 선택해주세요', 'info');
-                return;
-            }
-            appState.frameRotation = (appState.frameRotation + 90) % 360;
-            applyFrameRotation();
-            showStatus('프레임 회전: ' + appState.frameRotation + '°', 'info');
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('portrait').catch(() => {});
+                }
+            } catch (e) {}
         }
 
         // ============================================
@@ -1144,12 +1157,27 @@
             setTimeout(() => flash.remove(), 200);
 
             const ctx = ui.canvas.getContext('2d');
-            ui.canvas.width = ui.video.videoWidth;
-            ui.canvas.height = ui.video.videoHeight;
-            ctx.drawImage(ui.video, 0, 0);
+            const v = ui.video;
+            const longSide = Math.max(v.videoWidth, v.videoHeight);
 
+            // 프레임이 "가로"이면 가로(4:3) 캔버스, 아니면 세로(3:4) 캔버스
+            let cw, ch;
+            if (appState.frameLandscape) {
+                cw = longSide;
+                ch = Math.round(longSide * 3 / 4);
+            } else {
+                ch = longSide;
+                cw = Math.round(longSide * 3 / 4);
+            }
+            ui.canvas.width = cw;
+            ui.canvas.height = ch;
+
+            // 비디오를 캔버스에 object-fit: cover 의미로 그리기 (중앙 크롭)
+            drawVideoCover_(ctx, v, cw, ch);
+
+            // 프레임을 캔버스 전체에 합성
             if (appState.customFrameLoaded && appState.customFrameImage) {
-                ctx.drawImage(appState.customFrameImage, 0, 0, ui.canvas.width, ui.canvas.height);
+                ctx.drawImage(appState.customFrameImage, 0, 0, cw, ch);
             }
 
             const dataUrl = ui.canvas.toDataURL('image/jpeg', appState.imageQuality);
@@ -1165,6 +1193,33 @@
             ui.captureActions.classList.add('show');
 
             playShutterSound();
+        }
+
+        // 비디오를 지정 캔버스 크기에 cover 방식으로 중앙 크롭하여 그림
+        function drawVideoCover_(ctx, video, cw, ch) {
+            const vw = video.videoWidth;
+            const vh = video.videoHeight;
+            if (!vw || !vh) {
+                ctx.drawImage(video, 0, 0, cw, ch);
+                return;
+            }
+            const va = vw / vh;
+            const ca = cw / ch;
+            let sx, sy, sw, sh;
+            if (va > ca) {
+                // 비디오가 더 가로 — 좌우 잘라냄
+                sh = vh;
+                sw = Math.round(vh * ca);
+                sx = Math.round((vw - sw) / 2);
+                sy = 0;
+            } else {
+                // 비디오가 더 세로 — 상하 잘라냄
+                sw = vw;
+                sh = Math.round(vw / ca);
+                sx = 0;
+                sy = Math.round((vh - sh) / 2);
+            }
+            ctx.drawImage(video, sx, sy, sw, sh, 0, 0, cw, ch);
         }
 
         // 촬영 화면에서 "다시 찍기"

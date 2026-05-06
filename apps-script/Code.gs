@@ -147,6 +147,42 @@ function json_(obj) {
 // ============================================================
 // 수동 테스트용 (Apps Script 편집기에서 직접 실행 가능)
 // ============================================================
+
+/**
+ * 프레임 폴더 읽기 권한 + 응답 형식 확인
+ * 함수 드롭다운 → _testGetFrames 선택 → ▶ 실행 → "실행 로그" 확인
+ */
 function _testGetFrames() {
   Logger.log(getFrames_().getContent());
+}
+
+/**
+ * 제출 전체 경로 진단 (Drive 쓰기 + 스프레드시트 쓰기 권한 검증)
+ *
+ * 사용법:
+ *  1) 함수 드롭다운에서 _testSubmit 선택
+ *  2) ▶ 실행 클릭
+ *  3) 권한 다이얼로그가 뜨면 모두 허용 (Drive + Sheets)
+ *  4) "실행 로그" 확인 — `success: true` 면 정상
+ *  5) 스프레드시트에 "__진단" 행이 들어왔는지 직접 확인
+ */
+function _testSubmit() {
+  // 1×1 투명 PNG (base64) — imageData 필수 검증 통과용 최소 페이로드
+  const tinyPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+  const result = submitMission_({
+    schoolName: '__진단_학교',
+    teamName: '__진단_팀',
+    teamMembers: '관리자',
+    quizAnswer: 'TEST',
+    imageData: tinyPng,
+    date: new Date().toISOString().slice(0, 10),
+    course: '진단',
+    place: '진단',
+    timestamp: new Date().toISOString()
+  });
+  Logger.log('=== _testSubmit 결과 ===');
+  Logger.log(result.getContent());
+  Logger.log('=== 후속 확인 ===');
+  Logger.log('1) 스프레드시트(' + SHEET_ID + ')에 "__진단_학교" 행이 있는지 확인');
+  Logger.log('2) 프레임 폴더의 "제출사진/" 하위에 테스트 jpg가 있는지 확인');
 }
