@@ -186,3 +186,66 @@ function _testSubmit() {
   Logger.log('1) 스프레드시트(' + SHEET_ID + ')에 "__진단_학교" 행이 있는지 확인');
   Logger.log('2) 프레임 폴더의 "제출사진/" 하위에 테스트 jpg가 있는지 확인');
 }
+
+/**
+ * 권한/연결 단계별 진단 — 어디서 막히는지 정확히 출력
+ * 함수 드롭다운 → _diagnose 선택 → ▶ 실행
+ */
+function _diagnose() {
+  Logger.log('=== 진단 시작 ===');
+  Logger.log('실행 계정: ' + Session.getActiveUser().getEmail());
+  Logger.log('FRAME_FOLDER_ID: ' + FRAME_FOLDER_ID);
+  Logger.log('SHEET_ID: ' + SHEET_ID);
+  Logger.log('');
+
+  // 1) Drive 읽기 테스트
+  let folder;
+  try {
+    folder = DriveApp.getFolderById(FRAME_FOLDER_ID);
+    Logger.log('✅ [1/4] Drive 읽기 OK — 폴더명: "' + folder.getName() + '"');
+  } catch (e) {
+    Logger.log('❌ [1/4] Drive 읽기 실패: ' + e.message);
+    Logger.log('   → 해결: https://myaccount.google.com/permissions 에서 본 프로젝트의 권한을 "삭제" → 이 함수를 다시 실행 → 권한 다이얼로그를 모두 허용');
+    return;
+  }
+
+  // 2) Drive 쓰기 테스트 (임시 파일 생성 후 즉시 휴지통)
+  try {
+    const blob = Utilities.newBlob('perm test', 'text/plain', '_perm_test_' + Date.now() + '.txt');
+    const f = folder.createFile(blob);
+    f.setTrashed(true);
+    Logger.log('✅ [2/4] Drive 쓰기 OK (테스트 파일 생성 후 휴지통 처리)');
+  } catch (e) {
+    Logger.log('❌ [2/4] Drive 쓰기 실패: ' + e.message);
+    Logger.log('   → 폴더가 공유 드라이브에 있거나 본인이 편집자 권한이 없을 수 있음');
+    return;
+  }
+
+  // 3) Sheets 읽기 테스트
+  let ss;
+  try {
+    ss = SpreadsheetApp.openById(SHEET_ID);
+    Logger.log('✅ [3/4] Sheets 읽기 OK — 시트명: "' + ss.getName() + '"');
+  } catch (e) {
+    Logger.log('❌ [3/4] Sheets 읽기 실패: ' + e.message);
+    Logger.log('   → SHEET_ID 가 잘못되었거나 본인 계정에 권한이 없음');
+    return;
+  }
+
+  // 4) Sheets 쓰기 테스트 (임시 행 추가 후 즉시 삭제)
+  try {
+    const sh = ss.getSheetByName(SHEET_TAB_NAME) || ss.insertSheet(SHEET_TAB_NAME);
+    const before = sh.getLastRow();
+    sh.appendRow(['__perm_test__', new Date()]);
+    const after = sh.getLastRow();
+    if (after > before) sh.deleteRow(after);
+    Logger.log('✅ [4/4] Sheets 쓰기 OK');
+  } catch (e) {
+    Logger.log('❌ [4/4] Sheets 쓰기 실패: ' + e.message);
+    return;
+  }
+
+  Logger.log('');
+  Logger.log('=== 모든 권한 정상 ✓ ===');
+  Logger.log('이제 _testSubmit 을 다시 실행하면 작동합니다.');
+}
