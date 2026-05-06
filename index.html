@@ -1287,18 +1287,26 @@
                     timestamp: new Date().toISOString()
                 };
 
+                // FormData 방식 — Apps Script 표준 호환 패턴
+                // (JSON string body 는 일부 브라우저/네트워크 환경에서 CORS preflight 또는 redirect 문제 발생 가능)
+                const formData = new FormData();
+                formData.append('payload', JSON.stringify(payload));
+
                 let res;
                 try {
                     res = await fetch(appState.appsScriptUrl, {
                         method: 'POST',
-                        // text/plain 으로 보내 CORS preflight 회피 (Apps Script 표준 패턴)
-                        body: JSON.stringify(payload)
+                        body: formData,
+                        redirect: 'follow'
                     });
                 } catch (netErr) {
-                    throw new Error('NETWORK: 서버에 연결할 수 없습니다 (Apps Script 액세스 권한이 "모든 사용자"인지 확인 필요)');
+                    throw new Error('NETWORK: ' + (netErr && netErr.message ? netErr.message : '서버 연결 실패'));
                 }
 
                 const bodyText = await res.text();
+                console.log('[submit] HTTP', res.status, res.statusText);
+                console.log('[submit] body:', (bodyText || '').slice(0, 300));
+
                 let result = null;
                 try { result = JSON.parse(bodyText); } catch (e) { /* not JSON */ }
 
@@ -1306,15 +1314,16 @@
                     showStatus('✅ 미션이 제출되었습니다', 'success');
                     clearInputs();
                 } else if (result && result.error) {
-                    throw new Error('SERVER: ' + result.error);
+                    const stepInfo = result.step ? '[' + result.step + '] ' : '';
+                    throw new Error('SERVER: ' + stepInfo + result.error);
                 } else if (res.status === 401 || res.status === 403) {
-                    throw new Error('AUTH: Apps Script 액세스 권한이 "모든 사용자"가 아닙니다 (관리자에게 문의)');
+                    throw new Error('AUTH: Apps Script 액세스 권한이 "모든 사용자"가 아닙니다');
                 } else if (!res.ok) {
-                    throw new Error('HTTP ' + res.status + ': ' + bodyText.slice(0, 80));
-                } else if (bodyText.indexOf('<!DOCTYPE') === 0 || bodyText.indexOf('<html') !== -1) {
-                    throw new Error('AUTH: Apps Script가 로그인 페이지를 반환 — 배포 액세스 권한을 "모든 사용자"로 변경 필요');
+                    throw new Error('HTTP_' + res.status + ': ' + (bodyText || '').slice(0, 80));
+                } else if (bodyText && (bodyText.indexOf('<!DOCTYPE') === 0 || bodyText.indexOf('<html') !== -1)) {
+                    throw new Error('AUTH: Apps Script가 로그인 페이지 반환 — 액세스 권한 재설정 필요');
                 } else {
-                    throw new Error('알 수 없는 응답: ' + bodyText.slice(0, 80));
+                    throw new Error('PARSE: 응답을 파싱할 수 없습니다: ' + (bodyText || '(빈 응답)').slice(0, 80));
                 }
             } catch (err) {
                 console.error('제출 오류:', err);

@@ -29,7 +29,17 @@ function doGet(e) {
 function doPost(e) {
   let payload = {};
   try {
-    payload = JSON.parse(e.postData.contents);
+    // 1) FormData 방식 (e.parameter.payload) 우선 — CORS 호환
+    if (e && e.parameter && e.parameter.payload) {
+      payload = JSON.parse(e.parameter.payload);
+    }
+    // 2) 직접 JSON body 폴백 (구버전 클라이언트 호환)
+    else if (e && e.postData && e.postData.contents) {
+      payload = JSON.parse(e.postData.contents);
+    }
+    else {
+      return json_({ success: false, error: 'No payload received' });
+    }
   } catch (err) {
     return json_({ success: false, error: 'invalid JSON: ' + err.message });
   }
@@ -64,27 +74,62 @@ function getFrames_() {
 // 미션 제출
 // ============================================================
 function submitMission_(payload) {
-  try {
-    const required = ['schoolName', 'teamName', 'teamMembers', 'quizAnswer', 'imageData'];
-    for (let i = 0; i < required.length; i++) {
-      if (!payload[required[i]]) {
-        return json_({ success: false, error: '필수 항목 누락: ' + required[i] });
-      }
+  // 단계별 분리해 어느 단계에서 실패했는지 정확히 회신
+  const required = ['schoolName', 'teamName', 'teamMembers', 'quizAnswer', 'imageData'];
+  for (let i = 0; i < required.length; i++) {
+    if (!payload[required[i]]) {
+      return json_({ success: false, error: '필수 항목 누락: ' + required[i] });
     }
+  }
 
-    // 1) 사진 저장
+  // [1] base64 디코드
+  let blob;
+  try {
     const decoded = Utilities.base64Decode(payload.imageData);
     const fname = '보훈미션_' + sanitize_(payload.teamName) + '_' +
                   (payload.date || todayStr_()) + '_' + Date.now() + '.jpg';
-    const blob = Utilities.newBlob(decoded, 'image/jpeg', fname);
+    blob = Utilities.newBlob(decoded, 'image/jpeg', fname);
+  } catch (e) {
+    return json_({ success: false, step: 'DECODE', error: e.message });
+  }
 
-    const photosFolder = getOrCreatePhotosFolder_();
-    const file = photosFolder.createFile(blob);
+  // [2] 사진 폴더 접근/생성
+  let photosFolder;
+  try {
+    photosFolder = getOrCreatePhotosFolder_();
+  } catch (e) {
+    return json_({ success: false, step: 'FOLDER', error: e.message });
+  }
+
+  // [3] 파일 생성
+  let file, photoUrl;
+  try {
+    file = photosFolder.createFile(blob);
+    photoUrl = 'https://drive.google.com/file/d/' + file.getId() + '/view';
+  } catch (e) {
+    return json_({ success: false, step: 'CREATE_FILE', error: e.message });
+  }
+
+  // [4] 공유 설정 (실패해도 진행 — 시트 기록이 더 중요)
+  try {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    const photoUrl = 'https://drive.google.com/file/d/' + file.getId() + '/view';
+  } catch (e) {
+    Logger.log('setSharing 실패(무시): ' + e.message);
+  }
 
-    // 2) 스프레드시트에 기록
-    const sheet = getOrCreateSheet_();
+  // [5] 스프레드시트 열기
+  let sheet;
+  try {
+    sheet = getOrCreateSheet_();
+  } catch (e) {
+    return json_({
+      success: false, step: 'OPEN_SHEET', error: e.message,
+      photoUrl: photoUrl, note: '사진은 Drive에 저장됨'
+    });
+  }
+
+  // [6] 행 추가
+  try {
     if (sheet.getLastRow() === 0) {
       sheet.appendRow([
         '제출시각', '날짜', '코스', '장소',
@@ -104,11 +149,14 @@ function submitMission_(payload) {
       payload.quizAnswer || '',
       photoUrl
     ]);
-
-    return json_({ success: true, photoUrl: photoUrl });
-  } catch (err) {
-    return json_({ success: false, error: err.message });
+  } catch (e) {
+    return json_({
+      success: false, step: 'APPEND_ROW', error: e.message,
+      photoUrl: photoUrl, note: '사진은 Drive에 저장됨'
+    });
   }
+
+  return json_({ success: true, photoUrl: photoUrl });
 }
 
 // ============================================================
