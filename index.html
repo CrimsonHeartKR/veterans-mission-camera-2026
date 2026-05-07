@@ -1312,6 +1312,8 @@
 
                 if (result && result.success) {
                     showStatus('✅ 미션이 제출되었습니다', 'success');
+                    // 제출 성공 시에도 학생 폰에 사진 자동 저장 (Drive 업로드와 별개)
+                    savePhotoToDevice(team);
                     clearInputs();
                 } else if (result && result.error) {
                     const stepInfo = result.step ? '[' + result.step + '] ' : '';
@@ -1343,43 +1345,56 @@
             }
         }
 
-        // Apps Script 미설정/실패 시 로컬 저장
-        function downloadLocalAndCopy(school, team, members, answer) {
-            const fileName = `보훈미션_${team}_${appState.date}_${Date.now()}.jpg`;
+        // 학생 폰에 사진 저장 (Android/PC = 다운로드, iOS = 새 창 길게 눌러 저장)
+        function savePhotoToDevice(teamName) {
+            if (!appState.currentPhoto) return;
+            const safeTeam = String(teamName || 'photo').replace(/[\\\/:*?"<>|]/g, '_').slice(0, 30);
+            const fileName = `보훈미션_${safeTeam}_${appState.date}_${Date.now()}.jpg`;
             const dataUrl = appState.currentPhoto.dataUrl;
             const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
             if (isIOS) {
+                // iOS Safari: <a download> 미지원이라 새 창에 이미지 띄워 길게 눌러 저장
                 const w = window.open();
                 if (w) {
                     w.document.write(
                         `<!DOCTYPE html><html><head><title>${fileName}</title>` +
                         `<meta name="viewport" content="width=device-width,initial-scale=1">` +
                         `<style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#000;}img{max-width:100%;height:auto;}` +
-                        `.guide{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.85);color:#fff;text-align:center;padding:14px;font-size:14px;}</style></head><body>` +
+                        `.guide{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,0.85);color:#fff;text-align:center;padding:14px;font-size:14px;z-index:10;}</style></head><body>` +
                         `<div class="guide">📱 이미지를 <b>길게 눌러</b> "사진에 추가"로 저장하세요</div>` +
                         `<img src="${dataUrl}" alt="${fileName}"></body></html>`
                     );
                     w.document.close();
                 }
-            } else {
-                try {
-                    const byteString = atob(dataUrl.split(',')[1]);
-                    const ab = new ArrayBuffer(byteString.length);
-                    const ia = new Uint8Array(ab);
-                    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-                    const blob = new Blob([ab], { type: 'image/jpeg' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url; a.download = fileName;
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                    setTimeout(() => URL.revokeObjectURL(url), 3000);
-                } catch (e) {
-                    const a = document.createElement('a');
-                    a.href = dataUrl; a.download = fileName;
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-                }
+                // 팝업이 차단되어도 토스트는 띄움
+                showStatus('📱 새 창에서 이미지를 길게 눌러 저장하세요', 'info');
+                return;
             }
+
+            // Android / PC: blob 다운로드
+            try {
+                const byteString = atob(dataUrl.split(',')[1]);
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                const blob = new Blob([ab], { type: 'image/jpeg' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = fileName;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 3000);
+            } catch (e) {
+                // fallback: data URL 직접 다운로드
+                const a = document.createElement('a');
+                a.href = dataUrl; a.download = fileName;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            }
+        }
+
+        // Apps Script 미설정/실패 시 — 사진 저장 + 입력값을 클립보드에 백업
+        function downloadLocalAndCopy(school, team, members, answer) {
+            savePhotoToDevice(team);
 
             const summary = `[2026 보훈사적지 탐방 미션]\n학교: ${school}\n팀명: ${team}\n팀원: ${members}\n정답: ${answer}\n날짜: ${appState.date}`;
             if (navigator.clipboard) {
